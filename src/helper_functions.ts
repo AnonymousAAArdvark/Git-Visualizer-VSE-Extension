@@ -19,6 +19,8 @@ export enum Node_Type {
 }
 
 export interface Node {
+  x?: number;
+  y?: number;
   id: string;
   hover: string;
   rt_clk: string;

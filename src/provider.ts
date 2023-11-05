@@ -102,18 +102,34 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
         )
         ));
 
+        const d3_js = currentPanel.webview.asWebviewUri(vscode.Uri.file(
+            path.join(
+                this._extensionUri.path,
+                "node_modules",
+                "d3",
+                "dist",
+                "d3.js"
+            )
+            ));
+
         // And set its HTML content
         currentPanel.webview.html = getWebviewContent(
         force_graph_js,
         resize_js,
+        d3_js,
         this.prev_graph_data
         );
 
         function getWebviewContent(
         force_graph_js: vscode.Uri,
         resize_js: vscode.Uri,
+        d3_js: vscode.Uri,
         graph_data: Graph_Data
         ) {
+        for (let i = 0; i < graph_data.nodes.length; i++) {
+            graph_data.nodes[i].x = 0;
+            graph_data.nodes[i].y = graph_data.nodes.length - i;
+        }
         return `<head>
         <style>
             html, body {
@@ -130,17 +146,19 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
             #goalButton {
             position: absolute; 
             z-index: 99;
-            left: 0; 
-            right: 0;
-            bottom: 20px;
-            margin-left: auto;
-            margin-right: auto;
-            width: 200px;
+            top: 10px;
+            left: 10px;
+            // left: 0; 
+            // right: 0;
+            // bottom: 20px;
+            // margin-left: auto;
+            // margin-right: auto;
+            width: 120px;
             display: inline-block;
             outline: 0;
             border: 1px solid #3d3d3d;
             cursor: pointer;
-            border-radius: 4px;
+            border-radius: 0;
             font-size: 15px;
             height: 35px;
             background: #212121;
@@ -157,6 +175,7 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
 
         <script src="${force_graph_js}"></script>
         <script src="${resize_js}"></script>
+        <script src="${d3_js}"></script>
 
         </head>
 
@@ -166,18 +185,27 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
 
         <script>
             let showGoal = false;
+            let nodeCounter = 0;
             const Graph = ForceGraph()
                 (document.getElementById('graph'))
                 .nodeCanvasObject((node, ctx) => nodePaint(node, ['sandybrown', 'lightskyblue', 'hotpink', 'palegreen', 'orchid', 'lightcoral'][node.type], ctx))
                 .nodePointerAreaPaint(nodePaint)
+                .cooldownTicks(300)
                 .nodeLabel('hover')
+                .dagMode('radialIn')
+                .d3Force("link", d3.forceLink().id(function(d) { return d.id; }).distance(20))
+                .d3Force("charge", d3.forceManyBody().strength(-80))
+                // .d3Force("x", d3.forceX(.5).strength(.1))
+                .d3VelocityDecay(.2)
                 .backgroundColor('#1a1a1a')
-                .linkDirectionalArrowLength(6)
+                .linkDirectionalArrowLength(8)
                 .linkColor(link => 'white')
                 .onNodeRightClick(node => {
                     navigator.clipboard.writeText(node.rt_clk);
                 })
                 .graphData(${JSON.stringify(graph_data)})
+
+            Graph.onEngineStop(() => Graph.zoomToFit(300));
                             
             // Handle the message inside the webview
             window.addEventListener('message', event => {
@@ -198,7 +226,7 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
                 }
 
                 Graph.graphData(new_graph);
-                Graph.zoomToFit();
+                Graph.onEngineStop(() => Graph.zoomToFit(300));
             });              
 
             function nodePaint({ hover, type, x, y }, color, ctx) {
@@ -209,15 +237,17 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
 
                 [
                 () => { ctx.beginPath(); ctx.arc(x, y, 8, 0, 2 * Math.PI, false); ctx.fill(); }, // circle
-                () => { ctx.fillRect(x - 9, y - 9, 18, 18); ctx.fillStyle = 'black'; ctx.font = 'bold 9px Sans-Serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(identifier[type], x, y);}, // text box
+                () => { ctx.fillRect(x - 9, y - 9, 18, 18); ctx.fillStyle = 'black'; ctx.font = 'bold 10px Sans-Serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(identifier[type], x, y);}, // text box
                 ][type == 0 ? 0 : 1]();
             }
             
             elementResizeDetectorMaker().listenTo(
                 document.body,
                 (el) => {
-                Graph.width(el.offsetWidth);
-                Graph.height(el.offsetHeight);
+                    Graph.width(el.offsetWidth);
+                    Graph.height(el.offsetHeight);
+                    Graph.d3ReheatSimulation();
+                    Graph.onEngineStop(() => Graph.zoomToFit(300));
                 }
             );
 
@@ -237,7 +267,6 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
     }
     
     public async updateGraphData(context: vscode.ExtensionContext) {
-        console.log("updated");
         // makes sure that only 1 workspace is open
         if (vscode.workspace.workspaceFolders == undefined) {
             vscode.window.showInformationMessage(
@@ -275,6 +304,8 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
     
         // Create and show a new webview
         
-        this._view!.webview.postMessage(curr_graph_data);
+        if (this._view) {
+            this._view.webview.postMessage(curr_graph_data);
+        }
     }
 }

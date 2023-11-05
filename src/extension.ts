@@ -292,7 +292,9 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Create and show a new webview
     
-    currentPanel!.webview.postMessage(curr_graph_data);
+    if (currentPanel) {
+      currentPanel.webview.postMessage(curr_graph_data);
+    }
   }, 2000);
 
   context.subscriptions.push(vscode.Disposable.from({
@@ -305,7 +307,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(visualize);
 
-  vscode.commands.executeCommand("git-visualizer-view");
+  vscode.commands.executeCommand("git-visualizer.focus");
 }
 
 // this method is called when your extension is deactivated
