@@ -109,14 +109,6 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
         this.prev_graph_data
         );
 
-        // currentPanel.onDidDispose(
-        // () => {
-        //     currentPanel = undefined;
-        // },
-        // undefined,
-        // context.subscriptions
-        // );
-
         function getWebviewContent(
         force_graph_js: vscode.Uri,
         resize_js: vscode.Uri,
@@ -137,23 +129,27 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
 
             #goalButton {
             position: absolute; 
-            left: 10px; 
+            z-index: 99;
+            left: 0; 
+            right: 0;
             bottom: 20px;
+            margin-left: auto;
+            margin-right: auto;
+            width: 200px;
             display: inline-block;
             outline: 0;
-            border: 2px solid black;
+            border: 1px solid #3d3d3d;
             cursor: pointer;
-            font-weight: 600;
             border-radius: 4px;
-            font-size: 13px;
-            height: 30px;
-            background-color: #0000000d;
-            color: #0e0e10;
+            font-size: 15px;
+            height: 35px;
+            background: #212121;
+            color: white;
             padding: 0 20px;
             }
 
             #goalButton:hover {
-            background-color: #0000001a;
+            background-color: #1c1c1c;
             }
 
             
@@ -165,19 +161,19 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
         </head>
 
         <body>
-        <div id="graph"></div>
         <button id="goalButton" onClick="toggleGoal()">Show Goal</button>
+        <div id="graph"></div>
 
         <script>
             let showGoal = false;
             const Graph = ForceGraph()
                 (document.getElementById('graph'))
-                .nodeCanvasObject((node, ctx) => nodePaint(node, ['orange', 'darkblue', 'red', 'green', 'purple', 'maroon'][node.type], ctx))
+                .nodeCanvasObject((node, ctx) => nodePaint(node, ['sandybrown', 'lightskyblue', 'hotpink', 'palegreen', 'orchid', 'lightcoral'][node.type], ctx))
                 .nodePointerAreaPaint(nodePaint)
                 .nodeLabel('hover')
-                .backgroundColor('white')
+                .backgroundColor('#1a1a1a')
                 .linkDirectionalArrowLength(6)
-                .linkColor(link => 'black')
+                .linkColor(link => 'white')
                 .onNodeRightClick(node => {
                     navigator.clipboard.writeText(node.rt_clk);
                 })
@@ -212,8 +208,8 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
                 ctx.fillStyle = color;
 
                 [
-                () => { ctx.beginPath(); ctx.arc(x, y, 5, 0, 2 * Math.PI, false); ctx.fill(); }, // circle
-                () => { ctx.fillRect(x - 6, y - 6, 12, 12); ctx.fillStyle = 'white'; ctx.font = '6px Sans-Serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(identifier[type], x, y);}, // text box
+                () => { ctx.beginPath(); ctx.arc(x, y, 8, 0, 2 * Math.PI, false); ctx.fill(); }, // circle
+                () => { ctx.fillRect(x - 9, y - 9, 18, 18); ctx.fillStyle = 'black'; ctx.font = 'bold 9px Sans-Serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(identifier[type], x, y);}, // text box
                 ][type == 0 ? 0 : 1]();
             }
             

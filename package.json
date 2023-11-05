@@ -13,7 +13,7 @@
     "url": "https://github.com/AnonymousAAArdvark/Git-Visualizer"
   },
   "activationEvents": [
-    "onCommand:git-visualizer.visualize"
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {
