@@ -17,6 +17,26 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+          {
+          "id": "git-visualizer-view",
+          "title": "Git Visualizer",
+          "icon": "images/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "git-visualizer-view": [
+        {
+          "type": "webview",
+          "id": "git-visualizer",
+          "name": "Git Visualizer",
+          "icon": "images/icon.svg",
+          "contextualTitle": "Git Visualizer"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "git-visualizer.visualize",

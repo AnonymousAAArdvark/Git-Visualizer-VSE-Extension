@@ -4,6 +4,7 @@ import * as vscode from "vscode";
 import * as path from "path";
 import { LogResult, DefaultLogFields } from "simple-git";
 import { get_git_graph, Graph_Data, get_commits } from "./helper_functions";
+import { GitVisualizerProvider } from "./provider";
 
 let prevCommits: LogResult<DefaultLogFields>;
 
@@ -11,9 +12,15 @@ let prevCommits: LogResult<DefaultLogFields>;
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+  const provider = new GitVisualizerProvider(context.extensionUri);
+	context.subscriptions.push(
+		vscode.window.registerWebviewViewProvider(GitVisualizerProvider.viewType, provider));
+
   // Only allow a single webview
   let currentPanel: vscode.WebviewPanel | undefined = undefined;
   let prev_graph_data: Graph_Data | undefined = undefined;
+
+  
 
   // The command has been defined in the package.json file
   // Now provide the implementation of the command with registerCommand
@@ -242,6 +249,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   let interval = setInterval(async () => {
+    await provider.updateGraphData(context);
 
     // The code you place here will be executed every time your command is executed
 
