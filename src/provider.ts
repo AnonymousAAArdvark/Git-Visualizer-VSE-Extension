@@ -9,6 +9,8 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
 	private _view?: vscode.WebviewView;
     private prevCommits?: LogResult<DefaultLogFields>;
     private prev_graph_data: Graph_Data | undefined;
+    private sol_graph_data: Graph_Data | undefined;
+    private completed: boolean;
 
 
 	constructor(
@@ -16,8 +18,20 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
 	) {
         this.prevCommits = undefined;
         this.prev_graph_data = undefined;
-        
+        this.sol_graph_data = undefined;
+        this.completed = false;
      }
+
+    private async renameFolder(path: string, oldFolder: string, newFolder: string) {
+        const oldFolderPath = vscode.Uri.file(path + "/" + oldFolder); // Replace with the old folder path
+        const newFolderPath = vscode.Uri.file(path + "/" + newFolder); // Replace with the new folder path
+      
+        try {
+          await vscode.workspace.fs.rename(oldFolderPath, newFolderPath);
+        } catch (error : any) {
+          vscode.window.showErrorMessage('Error renaming folder: ' + error.message);
+        }
+    }
 
 	public async resolveWebviewView(
 		currentPanel: vscode.WebviewView,
@@ -79,6 +93,9 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
 
         // get git graph data
         this.prev_graph_data = await get_git_graph(ws_path);
+        await this.renameFolder(ws_path + "/.Git-Gud", ".git-gud", ".git");
+        this.sol_graph_data = await get_git_graph(ws_path + "/.Git-Gud")
+        await this.renameFolder(ws_path + "/.Git-Gud", ".git", ".git-gud");
 
         // Get path to resource on disk
         // And get the special URI to use with the webview
@@ -110,25 +127,33 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
                 "dist",
                 "d3.js"
             )
-            ));
+        ));
 
         // And set its HTML content
         currentPanel.webview.html = getWebviewContent(
         force_graph_js,
         resize_js,
         d3_js,
-        this.prev_graph_data
+        this.prev_graph_data,
+        this.sol_graph_data,
+        this.completed,
         );
 
         function getWebviewContent(
         force_graph_js: vscode.Uri,
         resize_js: vscode.Uri,
         d3_js: vscode.Uri,
-        graph_data: Graph_Data
+        graph_data: Graph_Data,
+        sol_graph_data: Graph_Data,
+        completed: boolean,
         ) {
         for (let i = 0; i < graph_data.nodes.length; i++) {
             graph_data.nodes[i].x = 0;
-            graph_data.nodes[i].y = graph_data.nodes.length - i;
+            graph_data.nodes[i].y = (graph_data.nodes.length - i);
+        }
+        for (let i = 0; i < sol_graph_data.nodes.length; i++) {
+            sol_graph_data.nodes[i].x = 0;
+            sol_graph_data.nodes[i].y = (sol_graph_data.nodes.length - i);
         }
         return `<head>
         <style>
@@ -170,7 +195,21 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
             background-color: #1c1c1c;
             }
 
-            
+            #completedText {
+                position: absolute;
+                text-align: center;
+                z-index: 99;
+                top: 35px;
+                left: 0;
+                right: 0;
+                margin-left: auto;
+                margin-right: auto;
+                // padding-top: 10px;
+                // padding-bottom: 10px;
+                font-size: 30px;
+                font-weight: bold;
+                color: lightgreen;
+            }
         </style>
 
         <script src="${force_graph_js}"></script>
@@ -181,52 +220,85 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
 
         <body>
         <button id="goalButton" onClick="toggleGoal()">Show Goal</button>
+        <p id="completedText">Exercise Completed!</p>
         <div id="graph"></div>
 
         <script>
             let showGoal = false;
             let nodeCounter = 0;
+            let graphData = ${JSON.stringify(graph_data)};
+            let completed = ${JSON.stringify(completed)};
+            let solGraphData = ${JSON.stringify(sol_graph_data)};
             const Graph = ForceGraph()
                 (document.getElementById('graph'))
                 .nodeCanvasObject((node, ctx) => nodePaint(node, ['sandybrown', 'lightskyblue', 'hotpink', 'palegreen', 'orchid', 'lightcoral'][node.type], ctx))
                 .nodePointerAreaPaint(nodePaint)
-                .cooldownTicks(300)
+                .cooldownTicks(200)
                 .nodeLabel('hover')
                 .dagMode('radialIn')
                 .d3Force("link", d3.forceLink().id(function(d) { return d.id; }).distance(20))
                 .d3Force("charge", d3.forceManyBody().strength(-80))
-                // .d3Force("x", d3.forceX(.5).strength(.1))
-                .d3VelocityDecay(.2)
+                .d3Force("x", d3.forceX(.5).strength(.1))
                 .backgroundColor('#1a1a1a')
                 .linkDirectionalArrowLength(8)
                 .linkColor(link => 'white')
                 .onNodeRightClick(node => {
                     navigator.clipboard.writeText(node.rt_clk);
                 })
-                .graphData(${JSON.stringify(graph_data)})
 
-            Graph.onEngineStop(() => Graph.zoomToFit(300));
+                // .d3VelocityDecay(.2)
+
+            if (showGoal) {
+                Graph.graphData(solGraphData);
+            } else {
+                Graph.graphData(graphData);
+            }
+
+            let completedText = document.getElementById("completedText");
+            if (completed) {
+                completedText.style.display = "block";
+              booleanValue = false;
+            } else {
+                completedText.style.display = "none";
+            }
+
+            Graph.onEngineStop(() => Graph.zoomToFit(200, 50));
                             
             // Handle the message inside the webview
             window.addEventListener('message', event => {
+                if (event.data === false || event.data === true) {
+                    completed = event.data;
+                    let completedText = document.getElementById("completedText");
+                    if (completed) {
+                        completedText.style.display = "block";
+                      booleanValue = false;
+                    } else {
+                        completedText.style.display = "none";
+                    }
+                    return;
+                }
 
                 let old_graph = Graph.graphData();
-                let new_graph = event.data;
+                graphData = event.data;
         
-                for (let i = 0; i < new_graph.nodes.length; ++i) {
+                for (let i = 0; i < graphData.nodes.length; ++i) {
                     for (let j = 0; j < old_graph.nodes.length; ++j) {
-                    if (new_graph.nodes[i].id == old_graph.nodes[j].id) {
-                        new_graph.nodes[i].x = old_graph.nodes[j].x;
-                        new_graph.nodes[i].y = old_graph.nodes[j].y;
-                        new_graph.nodes[i].vx = old_graph.nodes[j].vx;
-                        new_graph.nodes[i].vy = old_graph.nodes[j].vy;                       
+                    if (graphData.nodes[i].id == old_graph.nodes[j].id) {
+                        graphData.nodes[i].x = old_graph.nodes[j].x;
+                        graphData.nodes[i].y = old_graph.nodes[j].y;
+                        graphData.nodes[i].vx = old_graph.nodes[j].vx;
+                        graphData.nodes[i].vy = old_graph.nodes[j].vy;                       
                         break;
                     }
                     }
                 }
 
-                Graph.graphData(new_graph);
-                Graph.onEngineStop(() => Graph.zoomToFit(300));
+                if (showGoal) {
+                    Graph.graphData(solGraphData);
+                } else {
+                    Graph.graphData(graphData);
+                }
+                Graph.onEngineStop(() => Graph.zoomToFit(200, 50));
             });              
 
             function nodePaint({ hover, type, x, y }, color, ctx) {
@@ -247,7 +319,7 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
                     Graph.width(el.offsetWidth);
                     Graph.height(el.offsetHeight);
                     Graph.d3ReheatSimulation();
-                    Graph.onEngineStop(() => Graph.zoomToFit(300));
+                    Graph.onEngineStop(() => Graph.zoomToFit(200, 50));
                 }
             );
 
@@ -259,6 +331,11 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
                 button.innerHTML = 'Hide Goal';
                 } else {
                     button.innerHTML = 'Show Goal';
+                }
+                if (showGoal) {
+                    Graph.graphData(solGraphData);
+                } else {
+                    Graph.graphData(graphData);
                 }
             }
         </script>
@@ -295,17 +372,34 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
     
         // get git graph data
         let curr_graph_data = await get_git_graph(ws_path);
+
+        for (let i = 0; i < curr_graph_data.nodes.length; i++) {
+            curr_graph_data.nodes[i].x = 0;
+            curr_graph_data.nodes[i].y = (curr_graph_data.nodes.length - i);
+        }
+
+        this.completed = false;
+        if (this.sol_graph_data && curr_graph_data.nodes.length === this.sol_graph_data.nodes.length) {
+            this.completed = true;
+            for (let i = 0; i < curr_graph_data.nodes.length; i++) {
+                if (curr_graph_data.nodes[i].hover !== this.sol_graph_data.nodes[i].hover) {
+                    this.completed = false;
+                    break;
+                }
+            }
+        }
+
+        this._view!.webview.postMessage(this.completed);
     
         if (this.prev_graph_data && JSON.stringify(curr_graph_data.nodes) === JSON.stringify(this.prev_graph_data.nodes)) {
             return;
         }
+
     
         this.prev_graph_data = curr_graph_data;
     
         // Create and show a new webview
         
-        if (this._view) {
-            this._view.webview.postMessage(curr_graph_data);
-        }
+        this._view!.webview.postMessage(this.prev_graph_data);
     }
 }
