@@ -14,7 +14,12 @@ let prevCommits: LogResult<DefaultLogFields>;
 export function activate(context: vscode.ExtensionContext) {
   const provider = new GitVisualizerProvider(context.extensionUri);
 	context.subscriptions.push(
-		vscode.window.registerWebviewViewProvider(GitVisualizerProvider.viewType, provider));
+		vscode.window.registerWebviewViewProvider(GitVisualizerProvider.viewType, provider, { 
+      webviewOptions: {
+        retainContextWhenHidden: true,
+      }
+    })
+  );
 
   // Only allow a single webview
   let currentPanel: vscode.WebviewPanel | undefined = undefined;
