@@ -57,14 +57,14 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
 
 			localResourceRoots: [
 				this._extensionUri
-			]
+			],
 		};
 
 
         // The code you place here will be executed every time your command is executed
 
         // makes sure that only 1 workspace is open
-        if (vscode.workspace.workspaceFolders == undefined) {
+        if (vscode.workspace.workspaceFolders === undefined) {
             vscode.window.showInformationMessage(
             "No workspace opened! Please open only 1 workspace."
             );
@@ -91,15 +91,15 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
         // get path of workspace (first workspace)
         let ws_path = vscode.workspace.workspaceFolders[0].uri.fsPath;
 
-        // check if commits have changed
+        // // check if commits have changed
 
-        let currCommits: LogResult<DefaultLogFields> = await get_commits(ws_path);
+        // let currCommits: LogResult<DefaultLogFields> = await get_commits(ws_path);
 
-        if (currCommits === this.prevCommits) {
-            return;
-        }
+        // if (currCommits === this.prevCommits) {
+        //     return;
+        // }
 
-        this.prevCommits = currCommits;
+        // this.prevCommits = currCommits;
 
 
         // get git graph data
@@ -142,21 +142,21 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
 
         // And set its HTML content
         currentPanel.webview.html = getWebviewContent(
-        force_graph_js,
-        resize_js,
-        d3_js,
-        this.prev_graph_data,
-        this.sol_graph_data,
-        this.completed,
+            force_graph_js,
+            resize_js,
+            d3_js,
+            this.prev_graph_data,
+            this.sol_graph_data,
+            this.completed,
         );
 
         function getWebviewContent(
-        force_graph_js: vscode.Uri,
-        resize_js: vscode.Uri,
-        d3_js: vscode.Uri,
-        graph_data: Graph_Data,
-        sol_graph_data: Graph_Data,
-        completed: boolean,
+            force_graph_js: vscode.Uri,
+            resize_js: vscode.Uri,
+            d3_js: vscode.Uri,
+            graph_data: Graph_Data,
+            sol_graph_data: Graph_Data,
+            completed: boolean,
         ) {
         for (let i = 0; i < graph_data.nodes.length; i++) {
             graph_data.nodes[i].x = 0;
@@ -238,8 +238,8 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
             let showGoal = false;
             let nodeCounter = 0;
             let graphData = ${JSON.stringify(graph_data)};
-            let completed = ${JSON.stringify(completed)};
             let solGraphData = ${JSON.stringify(sol_graph_data)};
+            let completed = ${JSON.stringify(completed)};
             const Graph = ForceGraph()
                 (document.getElementById('graph'))
                 .nodeCanvasObject((node, ctx) => nodePaint(node, ['sandybrown', 'lightskyblue', 'hotpink', 'palegreen', 'orchid', 'lightcoral'][node.type], ctx))
@@ -294,13 +294,13 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
         
                 for (let i = 0; i < graphData.nodes.length; ++i) {
                     for (let j = 0; j < old_graph.nodes.length; ++j) {
-                    if (graphData.nodes[i].id == old_graph.nodes[j].id) {
-                        graphData.nodes[i].x = old_graph.nodes[j].x;
-                        graphData.nodes[i].y = old_graph.nodes[j].y;
-                        graphData.nodes[i].vx = old_graph.nodes[j].vx;
-                        graphData.nodes[i].vy = old_graph.nodes[j].vy;                       
-                        break;
-                    }
+                        if (graphData.nodes[i].id == old_graph.nodes[j].id) {
+                            graphData.nodes[i].x = old_graph.nodes[j].x;
+                            graphData.nodes[i].y = old_graph.nodes[j].y;
+                            graphData.nodes[i].vx = old_graph.nodes[j].vx;
+                            graphData.nodes[i].vy = old_graph.nodes[j].vy;                       
+                            break;
+                        }
                     }
                 }
 
@@ -405,7 +405,6 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
         if (this.prev_graph_data && JSON.stringify(curr_graph_data.nodes) === JSON.stringify(this.prev_graph_data.nodes)) {
             return;
         }
-
     
         this.prev_graph_data = curr_graph_data;
     
