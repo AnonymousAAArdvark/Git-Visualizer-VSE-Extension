@@ -25,11 +25,22 @@ export class GitVisualizerProvider implements vscode.WebviewViewProvider {
     private async renameFolder(path: string, oldFolder: string, newFolder: string) {
         const oldFolderPath = vscode.Uri.file(path + "/" + oldFolder); // Replace with the old folder path
         const newFolderPath = vscode.Uri.file(path + "/" + newFolder); // Replace with the new folder path
-      
+
         try {
-          await vscode.workspace.fs.rename(oldFolderPath, newFolderPath);
-        } catch (error : any) {
-          vscode.window.showErrorMessage('Error renaming folder: ' + error.message);
+            const parentDirectoryContents = await vscode.workspace.fs.readDirectory(vscode.Uri.file(path));
+            const oldFolderExists = parentDirectoryContents.some(([name, type]) => name === oldFolder && type === vscode.FileType.Directory);
+    
+            if (!oldFolderExists) {
+                // vscode.window.showErrorMessage('Error renaming folder: The old folder does not exist.');
+                return;
+            }
+    
+            // Rename the folder if it exists
+            await vscode.workspace.fs.rename(oldFolderPath, newFolderPath);
+            // vscode.window.showInformationMessage('Folder renamed successfully.');
+        } catch (error: any) {
+            // vscode.window.showErrorMessage('Error renaming folder: ' + error.message);
+            return;
         }
     }
 
