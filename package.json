@@ -4,7 +4,7 @@
   "publisher": "AnonymousAAArdvark",
   "description": "A tool to better visualize git branches meant to be used alongside Learn-Git",
   "icon": "images/logo.png",
-  "version": "0.0.6",
+  "version": "0.0.8",
   "engines": {
     "vscode": "^1.68.0"
   },
@@ -13,7 +13,6 @@
     "url": "https://github.com/AnonymousAAArdvark/Git-Visualizer"
   },
   "activationEvents": [
-    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -36,13 +35,7 @@
           "contextualTitle": "Git Visualizer"
         }
       ]
-    },
-    "commands": [
-      {
-        "command": "git-visualizer.visualize",
-        "title": "Git Visualizer: Visualize Git Graph"
-      }
-    ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
